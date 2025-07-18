@@ -1,8 +1,8 @@
 // script.js
 
-// --- サービス設定（変更なし） ---
+// --- サービス設定 ---
+// Firebaseの初期化
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-// ✅ docとgetDocを追加でインポート
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -12,25 +12,32 @@ const firebaseConfig = {
     storageBucket: "jikoshokai-9f75c.firebasestorage.app",
     messagingSenderId: "701041971815",
     appId: "1:701041971815:web:1bc7c96abfa0a398d0fac2"
-};
-const GEMINI_API_KEY = 'AIzaSyCodqLp1f3AvMlqaRXfuA8JBCglkObbK8k';
+  };
 
-// --- Firebaseの初期化（変更なし） ---
+// Gemini APIキー
+const GEMINI_API_KEY = 'AIzaSyCodqLp1f3AvMlqaRXfuA8JBCglkObbK8k'; // あなたのGemini APIキーをここに貼り付け
+
+
+// --- Firebaseの初期化 ---
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+
 // --- グローバル変数 ---
-// ✅ 現在表示している人物の情報を保持する変数を追加
+// 現在表示している人物の情報を保持する変数
 let currentProfile = null;
 
-// --- DOM要素の取得（変更なし） ---
+
+// --- DOM要素の取得 ---
 const chatForm = document.getElementById('chat-form');
 const userInput = document.getElementById('user-input');
-const personImage = document.getElementById('person-image'); // ✅ 画像要素も取得
+const chatLog = document.getElementById('chat-log');
+const personImage = document.getElementById('person-image');
 const speechBubble = document.getElementById('speech-bubble');
 const aiResponseText = document.getElementById('ai-response-text');
 
-// --- イベントリスナー（変更なし） ---
+
+// --- イベントリスナー ---
 chatForm.addEventListener('submit', (event) => {
     event.preventDefault();
     const userMessage = userInput.value.trim();
@@ -41,10 +48,11 @@ chatForm.addEventListener('submit', (event) => {
     }
 });
 
+
 // --- 関数の定義 ---
 
 /**
- * ✅ 指定されたIDのプロフィールをFirestoreから読み込む関数
+ * 指定されたIDのプロフィールをFirestoreから読み込む関数
  * @param {string} profileId - FirestoreのドキュメントID (例: 'person_01')
  */
 async function loadProfile(profileId) {
@@ -67,12 +75,22 @@ async function loadProfile(profileId) {
 }
 
 /**
- * チャットログにメッセージを追加する関数（変更なし）
+ * チャットログにメッセージを追加する関数
+ * @param {string} sender - 'user' または 'ai'
+ * @param {string} message - 表示するメッセージ
  */
-function appendMessage(sender, message) { /* ...変更なし... */ }
+function appendMessage(sender, message) {
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('message', `${sender}-message`);
+    messageElement.textContent = message;
+    
+    chatLog.appendChild(messageElement);
+    chatLog.scrollTop = chatLog.scrollHeight;
+}
 
 /**
- * ✅ AIからの返信を取得する関数（プロンプトを動的に生成するように変更）
+ * AIからの返信を取得して表示する
+ * @param {string} userMessage - ユーザーが入力したメッセージ
  */
 async function getAIResponse(userMessage) {
     if (!currentProfile) {
@@ -80,7 +98,7 @@ async function getAIResponse(userMessage) {
         return;
     }
 
-    // ✅ Firestoreから取得した知識を元にプロンプトを作成
+    // Firestoreから取得した知識を元にプロンプトを作成
     const prompt = `
         あなたは「${currentProfile.name}」という人物のAIです。
         以下の「知識」に基づいて、あなた自身の言葉としてユーザーからの質問に答えてください。
@@ -95,21 +113,52 @@ async function getAIResponse(userMessage) {
     showSpeechBubble('考え中...');
 
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
-            /* ...APIリクエストの বাকি অংশ পরিবর্তন করা হয়নি... */
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }]
+            })
         });
-        
-        // ... (APIレスポンスの処理部分は変更なし) ...
 
-    } catch (error) { /* ...変更なし... */ }
+        if (!response.ok) {
+            console.error('API Response Error:', response.status, response.statusText);
+            throw new Error('APIからの応答が正常ではありません。');
+        }
+
+        const data = await response.json();
+        
+        if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0]) {
+             const aiMessage = data.candidates[0].content.parts[0].text;
+             showSpeechBubble(aiMessage.trim());
+        } else {
+            console.error('無効なレスポンス形式:', data);
+            throw new Error('AIからの応答形式が正しくありません。');
+        }
+
+    } catch (error) {
+        console.error('APIリクエストエラー:', error);
+        showSpeechBubble('申し訳ありません、エラーが発生しました。');
+    }
 }
 
 /**
- * 吹き出しにテキストを表示する関数（変更なし）
+ * 吹き出しにテキストを表示する関数
+ * @param {string} text - 表示するテキスト
  */
-function showSpeechBubble(text) { /* ...変更なし... */ }
+function showSpeechBubble(text) {
+    aiResponseText.textContent = text;
+    speechBubble.classList.remove('hidden');
+
+    // 7秒後に自動で吹き出しを隠す
+    setTimeout(() => {
+        speechBubble.classList.add('hidden');
+    }, 7000);
+}
 
 
 // --- 初期化処理 ---
-// ✅ ページが読み込まれたら、デフォルトのプロフィールを読み込む
+// ページが読み込まれたら、デフォルトのプロフィール('person_01')を読み込む
 loadProfile('person_01');
