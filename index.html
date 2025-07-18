@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 自己紹介ページ</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="app-container">
+
+        <header id="control-panel">
+            <button id="switch-person-btn">人物を切り替え</button>
+            <button id="personalize-btn">パーソナライズ</button>
+        </header>
+
+        <main id="main-content">
+            <div id="person-image-container">
+                <img src="placeholder.png" alt="人物の画像" id="person-image">
+                <div id="speech-bubble" class="hidden">
+                    <p id="ai-response-text"></p>
+                </div>
+            </div>
+
+            <div id="chat-log">
+                </div>
+        </main>
+
+        <footer id="chat-footer">
+            <form id="chat-form">
+                <input type="text" id="user-input" placeholder="質問を入力してください..." autocomplete="off">
+                <button type="submit">送信</button>
+            </form>
+        </footer>
+
+    </div>
+
+    </body>
+</html>
