@@ -95,7 +95,7 @@ async function getAIResponse(userMessage) {
     showSpeechBubble('考え中...');
 
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.0-pro:generateContent?key=${GEMINI_API_KEY}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
             /* ...APIリクエストの বাকি অংশ পরিবর্তন করা হয়নি... */
         });
         
