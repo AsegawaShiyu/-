@@ -4,7 +4,7 @@
 body {
     font-family: sans-serif;
     margin: 0;
-    background-color: #ffffff; /* 背景は白 */
+    background-color: #ffffff;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -23,6 +23,7 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;
 }
 
 /* ヘッダーのコントロールパネル */
@@ -59,9 +60,10 @@ body {
 #person-image {
     width: 150px;
     height: 150px;
-    border-radius: 50%; /* 画像を円形に */
+    border-radius: 50%;
     object-fit: cover;
     border: 4px solid #f0f0f0;
+    transition: filter 0.3s; /* ぼかし効果にアニメーションを追加 */
 }
 
 /* AIの吹き出し */
@@ -72,19 +74,19 @@ body {
     border-radius: 20px;
     max-width: 80%;
     position: absolute;
-    top: 160px; /* 画像の下に配置 */
+    top: 160px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     opacity: 1;
     transition: opacity 0.3s, transform 0.3s;
-    max-height: 150px; /* 吹き出しの最大の高さを指定 */
-    overflow-y: auto;  /* 内容がはみ出た場合に縦スクロールバーを表示 */
-    word-wrap: break-word; /* 長い単語でも折り返すようにする */
+    max-height: 150px;
+    overflow-y: auto;
+    word-wrap: break-word;
 }
 
 #speech-bubble.hidden {
     opacity: 0;
     transform: scale(0.9);
-    pointer-events: none; /* 非表示中はクリックできないように */
+    pointer-events: none;
 }
 
 /* 会話の履歴 */
@@ -92,14 +94,38 @@ body {
     flex-grow: 1;
     width: 100%;
     padding: 20px;
-    overflow-y: auto; /* 会話が長くなったらスクロール */
-    margin-top: 80px; /* 吹き出しと重ならないようにスペースを確保 */
+    overflow-y: auto;
+    margin-top: 80px;
 }
+
+.message {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.user-message {
+    justify-content: flex-end;
+}
+.user-message p {
+    background-color: #f0f0f0;
+    padding: 10px 15px;
+    border-radius: 20px;
+}
+
+.ai-message p {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 20px;
+}
+
 
 /* チャット入力フォーム */
 #chat-footer {
     border-top: 1px solid #e0e0e0;
     padding: 10px;
+    background-color: #fff;
 }
 
 #chat-form {
@@ -125,7 +151,8 @@ body {
     font-size: 16px;
 }
 
-#personalization-screen {
+/* モーダル共通スタイル */
+#personalization-screen, #add-person-modal {
     position: absolute;
     top: 0;
     left: 0;
@@ -137,8 +164,11 @@ body {
     align-items: center;
     z-index: 1000;
 }
+#personalization-screen.hidden, #add-person-modal.hidden {
+    display: none;
+}
 
-#personalization-content {
+#personalization-content, #add-person-content {
     background-color: white;
     padding: 30px;
     border-radius: 10px;
@@ -149,17 +179,15 @@ body {
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
 
-.question-item {
+.question-item, .feedback-item, .form-item {
     margin-bottom: 20px;
 }
-
-.question-item label {
+.question-item label, .feedback-item label, .form-item label {
     display: block;
     font-weight: bold;
     margin-bottom: 5px;
 }
-
-.question-item textarea {
+.question-item textarea, .feedback-item textarea {
     width: 100%;
     min-height: 60px;
     padding: 10px;
@@ -167,61 +195,21 @@ body {
     border-radius: 5px;
     font-size: 1rem;
 }
-
-#personalization-screen.hidden {
-    display: none;
-}
-/* style.css の末尾に追加 */
-
-.message {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.bad-feedback-btn {
-    background: none;
-    border: 1px solid #ff4d4d;
-    color: #ff4d4d;
+.form-item input {
+    width: calc(100% - 22px);
+    padding: 8px 10px;
+    border: 1px solid #ccc;
     border-radius: 5px;
-    padding: 2px 5px;
-    font-size: 0.7rem;
-    cursor: pointer;
-    opacity: 0.5;
-    transition: all 0.2s;
+    font-size: 1rem;
 }
-
-.bad-feedback-btn:hover {
-    background-color: #ff4d4d;
-    color: white;
-    opacity: 1;
+.form-actions {
+    margin-top: 20px;
+    text-align: right;
 }
-
-/* ユーザーのメッセージは右寄せにする（例） */
-.user-message {
-    justify-content: flex-end;
+.bad-feedback-btn {
+    background: none; border: 1px solid #ff4d4d; color: #ff4d4d;
+    border-radius: 5px; padding: 2px 5px; font-size: 0.7rem; cursor: pointer;
+    opacity: 0.5; transition: all 0.2s;
 }
-
-.plus-btn {
-    font-weight: bold;
-    font-size: 1.2rem;
-}
-
-/* #add-person-modalは#personalization-screenとほぼ同じスタイル */
-#add-person-modal {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); display: flex;
-    justify-content: center; align-items: center; z-index: 1000;
-}
-#add-person-modal.hidden { display: none; }
-
-#add-person-content {
-    background-color: white; padding: 30px; border-radius: 10px;
-    width: 90%; max-width: 500px;
-}
-
-.form-item { margin-bottom: 15px; }
-.form-item label { display: block; margin-bottom: 5px; }
-.form-item input { width: calc(100% - 20px); padding: 8px 10px; border: 1px solid #ccc; border-radius: 5px; }
-
-.form-actions { margin-top: 20px; text-align: right; }
+.bad-feedback-btn:hover { background-color: #ff4d4d; color: white; opacity: 1; }
+.plus-btn { font-weight: bold; font-size: 1.2rem; }
