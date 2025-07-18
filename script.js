@@ -78,7 +78,13 @@ async function getAIResponse(userMessage) {
     showSpeechBubble('考え中...');
 
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.0-pro:generateContent?key=${GEMINI_API_KEY}`, {
+        // ▼▼▼ この fetch(...) の行を丸ごと置き換えてください ▼▼▼
+
+        // [誤] 以前のURL
+        // const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, { ... });
+
+        // [正] 新しい安定版のURL
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.0-pro:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
