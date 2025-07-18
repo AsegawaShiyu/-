@@ -295,14 +295,6 @@ async function loadProfile(profileId) {
     } catch (error) { console.error("プロフィールの読み込みエラー:", error); }
 }
 
-function appendMessage(sender, message) {
-    const messageElement = document.createElement('div');
-    messageElement.classList.add('message', `${sender}-message`);
-    messageElement.textContent = message;
-    chatLog.appendChild(messageElement);
-    chatLog.scrollTop = chatLog.scrollHeight;
-}
-
 async function getAIResponse(userMessage) {
     if (!currentProfile) {
         showSpeechBubble("最初にプロフィールを読み込んでください。");
