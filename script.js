@@ -2,9 +2,11 @@
 
 // --- サービス設定 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-// ✅ getDocsとcollectionをここで確実にインポート
-import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, addDoc, serverTimestamp, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, addDoc, serverTimestamp, query, where, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+// ✅ AuthのcreateUserWithEmailAndPasswordを追加
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+// ✅ Firebase Storageの関数をインポート
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-storage.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCEcwh528U2-e8MTENHHsQAny2ES3Jnm40",
@@ -23,6 +25,7 @@ const GEMINI_API_KEY = 'AIzaSyCodqLp1f3AvMlqaRXfuA8JBCglkObbK8k'; // あなた�
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const storage = getStorage(app);
 
 
 // --- グローバル変数 ---
@@ -45,6 +48,10 @@ const chatFooter = document.getElementById('chat-footer');
 const personalizationScreen = document.getElementById('personalization-screen');
 const personalizationQuestions = document.getElementById('personalization-questions');
 const savePersonalizationBtn = document.getElementById('save-personalization-btn');
+const addPersonBtn = document.getElementById('add-person-btn');
+const addPersonModal = document.getElementById('add-person-modal');
+const addPersonForm = document.getElementById('add-person-form');
+const cancelAddPersonBtn = document.getElementById('cancel-add-person-btn');
 
 
 // --- イベントリスナー ---
@@ -154,7 +161,54 @@ chatLog.addEventListener('click', async (event) => {
     }
 });
 
+// ✅ 人物追加ボタンのリスナー
+addPersonBtn.addEventListener('click', () => {
+    addPersonModal.classList.remove('hidden');
+});
+cancelAddPersonBtn.addEventListener('click', () => {
+    addPersonModal.classList.add('hidden');
+});
 
+// ✅ 人物追加フォームの送信リスナー
+addPersonForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const name = document.getElementById('new-person-name').value;
+    const email = document.getElementById('new-person-email').value;
+    const password = document.getElementById('new-person-password').value;
+    const imageFile = document.getElementById('new-person-image').files[0];
+
+    if (!name || !email || !password || !imageFile) {
+        alert('すべての項目を入力してください。');
+        return;
+    }
+
+    try {
+        // 1. Firebase Authenticationでユーザーを作成
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const userId = userCredential.user.uid;
+
+        // 2. Firebase Storageに画像をアップロード
+        const storageRef = ref(storage, `profile_images/${userId}`);
+        await uploadBytes(storageRef, imageFile);
+        const imageUrl = await getDownloadURL(storageRef);
+
+        // 3. Firestoreにプロフィール情報を作成 (ドキュメントIDをAuthのUIDと一致させる)
+        await setDoc(doc(db, "profiles", userId), {
+            name: name,
+            imageUrl: imageUrl,
+            knowledge: `こんにちは、${name}です。よろしくお願いします。` // 初期ナレッジ
+        });
+        
+        alert('新しい人物が追加されました！');
+        addPersonForm.reset();
+        addPersonModal.classList.add('hidden');
+        loadAllProfiles(); // リストを再読み込み
+
+    } catch (error) {
+        console.error("人物の追加エラー:", error);
+        alert("エラーが発生しました: " + error.message);
+    }
+});
 // --- 関数の定義 ---
 
 async function loadAllProfiles() {
