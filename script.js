@@ -26,6 +26,9 @@ const db = getFirestore(app);
 // --- グローバル変数 ---
 // 現在表示している人物の情報を保持する変数
 let currentProfile = null;
+// 表示するプロフィールのIDリストと、現在のインデックスを管理する変数
+const profileIds = ['person_01', 'person_02'];
+let currentProfileIndex = 0;
 
 
 // --- DOM要素の取得 ---
@@ -35,6 +38,7 @@ const chatLog = document.getElementById('chat-log');
 const personImage = document.getElementById('person-image');
 const speechBubble = document.getElementById('speech-bubble');
 const aiResponseText = document.getElementById('ai-response-text');
+const switchPersonBtn = document.getElementById('switch-person-btn');
 
 
 // --- イベントリスナー ---
@@ -46,6 +50,18 @@ chatForm.addEventListener('submit', (event) => {
         getAIResponse(userMessage);
         userInput.value = '';
     }
+});
+
+// 人物切り替えボタンがクリックされたときの処理
+switchPersonBtn.addEventListener('click', () => {
+    // 次のプロフィールのインデックスに更新（リストの最後に達したら最初に戻る）
+    currentProfileIndex = (currentProfileIndex + 1) % profileIds.length;
+    
+    // 次のプロフィールIDを取得
+    const nextProfileId = profileIds[currentProfileIndex];
+    
+    // 新しいプロフィールを読み込む
+    loadProfile(nextProfileId);
 });
 
 
@@ -160,5 +176,5 @@ function showSpeechBubble(text) {
 
 
 // --- 初期化処理 ---
-// ページが読み込まれたら、デフォルトのプロフィール('person_01')を読み込む
-loadProfile('person_01');
+// ページが読み込まれたら、リストの最初のプロフィールを読み込む
+loadProfile(profileIds[currentProfileIndex]);
