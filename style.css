@@ -171,3 +171,33 @@ body {
 #personalization-screen.hidden {
     display: none;
 }
+/* style.css の末尾に追加 */
+
+.message {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.bad-feedback-btn {
+    background: none;
+    border: 1px solid #ff4d4d;
+    color: #ff4d4d;
+    border-radius: 5px;
+    padding: 2px 5px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: all 0.2s;
+}
+
+.bad-feedback-btn:hover {
+    background-color: #ff4d4d;
+    color: white;
+    opacity: 1;
+}
+
+/* ユーザーのメッセージは右寄せにする（例） */
+.user-message {
+    justify-content: flex-end;
+}
