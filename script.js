@@ -2,7 +2,8 @@
 
 // --- サービス設定 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+// ✅ getDocsとcollectionをここで確実にインポート
+import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, addDoc, serverTimestamp, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -25,11 +26,10 @@ const auth = getAuth(app);
 
 
 // --- グローバル変数 ---
-let currentProfile = null;
-const profileIds = ['person_01', 'person_02'];
-let currentProfileIndex = 0;
+let profiles = []; // ✅ 全プロフィールの情報を保持する配列
+let currentProfileIndex = 0; // ✅ 現在表示しているプロフィールのインデックス
+let currentProfile = null; // 現在表示している人物のデータ
 let lastUserMessage = '';
-
 
 // --- DOM要素の取得 ---
 const chatForm = document.getElementById('chat-form');
@@ -59,19 +59,22 @@ chatForm.addEventListener('submit', (event) => {
     }
 });
 
+// ✅ 人物切り替えのロジックを更新
 switchPersonBtn.addEventListener('click', () => {
-    currentProfileIndex = (currentProfileIndex + 1) % profileIds.length;
-    const nextProfileId = profileIds[currentProfileIndex];
+    if (profiles.length === 0) return;
+    currentProfileIndex = (currentProfileIndex + 1) % profiles.length;
+    const nextProfileId = profiles[currentProfileIndex].id;
     loadProfile(nextProfileId);
 });
 
+// ✅ 編集対象のID取得方法を更新
 personalizeBtn.addEventListener('click', async () => {
-    const profileIdToEdit = profileIds[currentProfileIndex];
+    if (!currentProfile) return;
+    const profileIdToEdit = profiles[currentProfileIndex].id;
     const email = prompt("編集するプロフィールのメールアドレスを入力してください:", `${profileIdToEdit}@example.com`);
     if (!email) return;
     const password = prompt("パスワードを入力してください:");
     if (!password) return;
-
     try {
         await signInWithEmailAndPassword(auth, email, password);
         alert(`認証に成功しました。「${currentProfile.name}」のパーソナライズを開始します。`);
@@ -83,7 +86,7 @@ personalizeBtn.addEventListener('click', async () => {
 });
 
 savePersonalizationBtn.addEventListener('click', async () => {
-    const profileIdToUpdate = profileIds[currentProfileIndex];
+    const profileIdToUpdate = profiles[currentProfileIndex].id;
     let newKnowledge = '';
     const feedbackItems = personalizationQuestions.querySelectorAll('.feedback-item');
     const feedbackIdsToDelete = [];
@@ -133,7 +136,7 @@ chatLog.addEventListener('click', async (event) => {
         const button = event.target;
         const badAnswer = button.dataset.answer;
         const question = button.dataset.question;
-        const profileId = profileIds[currentProfileIndex];
+        const profileId = profiles[currentProfileIndex].id;
         try {
             await addDoc(collection(db, "feedback"), {
                 profileId: profileId,
@@ -153,6 +156,28 @@ chatLog.addEventListener('click', async (event) => {
 
 
 // --- 関数の定義 ---
+
+async function loadAllProfiles() {
+    try {
+        const querySnapshot = await getDocs(collection(db, "profiles"));
+        profiles = []; // 配列をリセット
+        querySnapshot.forEach((doc) => {
+            // ドキュメントIDとデータを両方保存
+            profiles.push({ id: doc.id, ...doc.data() });
+        });
+
+        if (profiles.length > 0) {
+            // 最初のプロフィールを読み込む
+            currentProfileIndex = 0;
+            loadProfile(profiles[currentProfileIndex].id);
+        } else {
+            alert("プロフィールが1件も登録されていません。");
+        }
+    } catch (error) {
+        console.error("全プロフィールの読み込みエラー:", error);
+    }
+}
+
 async function startPersonalization() {
     mainContent.style.display = 'none';
     chatFooter.style.display = 'none';
@@ -299,4 +324,4 @@ function showSpeechBubble(text) {
 
 
 // --- 初期化処理 ---
-loadProfile(profileIds[currentProfileIndex]);
+loadAllProfiles();
