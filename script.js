@@ -2,7 +2,8 @@
 
 // --- サービス設定 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+// ✅ addDoc, collection を追加でインポート
+import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -28,6 +29,7 @@ const auth = getAuth(app);
 let currentProfile = null;
 const profileIds = ['person_01', 'person_02'];
 let currentProfileIndex = 0;
+let lastUserMessage = ''; // ✅ ユーザーの最後の質問を保持する変数
 
 
 // --- DOM要素の取得 ---
@@ -51,9 +53,37 @@ chatForm.addEventListener('submit', (event) => {
     event.preventDefault();
     const userMessage = userInput.value.trim();
     if (userMessage) {
+        lastUserMessage = userMessage; // ✅ 質問をグローバル変数に保存
         appendMessage('user', userMessage);
         getAIResponse(userMessage);
         userInput.value = '';
+    }
+});
+
+// ✅ chatLog全体にイベントリスナーを設定（イベント委任）
+chatLog.addEventListener('click', async (event) => {
+    // クリックされたのがBadボタンかどうかを判定
+    if (event.target.classList.contains('bad-feedback-btn')) {
+        const button = event.target;
+        const badAnswer = button.dataset.answer;
+        const question = button.dataset.question;
+        const profileId = profileIds[currentProfileIndex];
+
+        try {
+            // Firestoreの'feedback'コレクションにデータを追加
+            await addDoc(collection(db, "feedback"), {
+                profileId: profileId,
+                question: question,
+                badAnswer: badAnswer,
+                timestamp: serverTimestamp() // ✅ サーバーのタイムスタンプを記録
+            });
+            alert('フィードバックを送信しました。ありがとうございます！');
+            button.textContent = '送信済';
+            button.disabled = true; // ボタンを無効化
+        } catch (error) {
+            console.error("フィードバックの保存エラー:", error);
+            alert("フィードバックの送信に失敗しました。");
+        }
     }
 });
 
@@ -124,6 +154,34 @@ savePersonalizationBtn.addEventListener('click', async () => {
 
 
 // --- 関数の定義 ---
+
+/**
+ * チャットログにメッセージを追加する関数
+ * @param {string} sender - 'user' または 'ai'
+ * @param {string} message - 表示するメッセージ
+ */
+function appendMessage(sender, message) {
+    const messageContainer = document.createElement('div');
+    messageContainer.classList.add('message', `${sender}-message`);
+
+    const messageElement = document.createElement('p');
+    messageElement.textContent = message;
+    messageContainer.appendChild(messageElement);
+
+    // ✅ AIのメッセージの場合、Badボタンを追加
+    if (sender === 'ai') {
+        const badButton = document.createElement('button');
+        badButton.textContent = 'Bad';
+        badButton.classList.add('bad-feedback-btn');
+        // ✅ ボタンに質問と回答の情報を保持させる
+        badButton.dataset.question = lastUserMessage;
+        badButton.dataset.answer = message;
+        messageContainer.appendChild(badButton);
+    }
+    
+    chatLog.appendChild(messageContainer);
+    chatLog.scrollTop = chatLog.scrollHeight;
+}
 
 async function startPersonalization() {
     mainContent.style.display = 'none';
@@ -218,6 +276,8 @@ async function getAIResponse(userMessage) {
         if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0]) {
              const aiMessage = data.candidates[0].content.parts[0].text;
              showSpeechBubble(aiMessage.trim());
+            // ✅ AIのメッセージをログにも追加
+             appendMessage('ai', aiMessage.trim());
         } else {
             console.error('無効なレスポンス形式:', data);
             throw new Error('AIからの応答形式が正しくありません。');
