@@ -225,7 +225,8 @@ async function loadProfile(profileId) {
             currentProfile = docSnap.data();
             personImage.src = currentProfile.imageUrl || './placeholder.png';
             personImage.style.filter = `blur(${currentProfile.blurAmount || 0}px)`;
-            showSpeechBubble(`こんにちは！${currentProfile.name}です。何でも質問してください。`);
+            chatLog.innerHTML = ''; // ログをクリア
+            appendMessage('ai', `こんにちは！${currentProfile.name}です。何でも質問してください。`);
         } else {
             console.error("プロフィールが見つかりません:", profileId);
         }
@@ -302,7 +303,6 @@ function appendMessage(sender, message) {
 async function getAIResponse(userMessage) {
     if (!currentProfile) { return; }
     const prompt = `あなたは「${currentProfile.name}」という人物のAIです。以下の「知識」に基づき、あなた自身の言葉としてユーザーの質問に答えてください。# 知識\n${currentProfile.knowledge}\n# ユーザーからの質問\n${userMessage}`;
-    showSpeechBubble('考え中...');
     try {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
@@ -313,21 +313,12 @@ async function getAIResponse(userMessage) {
         const data = await response.json();
         if (data.candidates && data.candidates[0].content.parts[0]) {
              const aiMessage = data.candidates[0].content.parts[0].text;
-             showSpeechBubble(aiMessage.trim());
              appendMessage('ai', aiMessage.trim());
         } else { throw new Error('Invalid response format'); }
     } catch (error) {
         console.error('APIリクエストエラー:', error);
-        showSpeechBubble('申し訳ありません、エラーが発生しました。');
+        appendMessage('ai', '申し訳ありません、エラーが発生しました。');
     }
-}
-
-function showSpeechBubble(text) {
-    aiResponseText.textContent = text;
-    speechBubble.classList.remove('hidden');
-    setTimeout(() => {
-        speechBubble.classList.add('hidden');
-    }, 7000);
 }
 
 
