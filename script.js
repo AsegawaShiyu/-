@@ -80,12 +80,51 @@ personalizeBtn.addEventListener('click', async () => {
     }
 });
 
+// ✅「この内容で保存する」ボタンのイベントリスナーを追加
+savePersonalizationBtn.addEventListener('click', async () => {
+    const profileIdToUpdate = profileIds[currentProfileIndex];
+    const questionItems = personalizationQuestions.querySelectorAll('.question-item');
+    
+    let newKnowledge = '';
+    questionItems.forEach(item => {
+        const question = item.querySelector('label').textContent;
+        const answer = item.querySelector('textarea').value.trim();
+        if (answer) {
+            newKnowledge += `質問: ${question}\n回答: ${answer}\n\n`;
+        }
+    });
+
+    if (!newKnowledge) {
+        alert('少なくとも1つの質問に回答してください。');
+        return;
+    }
+
+    try {
+        // Firestoreのドキュメントを更新
+        const docRef = doc(db, "profiles", profileIdToUpdate);
+        await updateDoc(docRef, {
+            knowledge: newKnowledge
+        });
+        
+        alert('知識ベースが正常に更新されました！');
+        
+        // パーソナライズ画面を閉じてメイン画面に戻る
+        personalizationScreen.classList.add('hidden');
+        mainContent.style.display = 'flex';
+        chatFooter.style.display = 'flex';
+        
+        // 更新されたプロフィールを再読み込み
+        loadProfile(profileIdToUpdate);
+
+    } catch (error) {
+        console.error("知識ベースの更新エラー:", error);
+        alert("保存中にエラーが発生しました。");
+    }
+});
+
 
 // --- 関数の定義 ---
 
-/**
- * パーソナライズを開始する関数
- */
 async function startPersonalization() {
     mainContent.style.display = 'none';
     chatFooter.style.display = 'none';
@@ -104,10 +143,7 @@ async function startPersonalization() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: promptForQuestions }] }] })
         });
-
-        if (!response.ok) {
-            throw new Error('APIからの応答が正常ではありません。');
-        }
+        if (!response.ok) { throw new Error('APIからの応答が正常ではありません。'); }
 
         const data = await response.json();
         const questionsText = data.candidates[0].content.parts[0].text;
@@ -131,15 +167,10 @@ async function startPersonalization() {
     }
 }
 
-/**
- * 指定されたIDのプロフィールをFirestoreから読み込む関数
- * @param {string} profileId - FirestoreのドキュメントID (例: 'person_01')
- */
 async function loadProfile(profileId) {
     try {
         const docRef = doc(db, "profiles", profileId);
         const docSnap = await getDoc(docRef);
-
         if (docSnap.exists()) {
             currentProfile = docSnap.data();
             personImage.src = currentProfile.imageUrl || './placeholder.png';
@@ -148,62 +179,42 @@ async function loadProfile(profileId) {
             console.error("プロフィールが見つかりません:", profileId);
             showSpeechBubble("エラー: プロフィールが見つかりません。");
         }
-    } catch (error) {
-        console.error("プロフィールの読み込みエラー:", error);
-    }
+    } catch (error) { console.error("プロフィールの読み込みエラー:", error); }
 }
 
-/**
- * チャットログにメッセージを追加する関数
- * @param {string} sender - 'user' または 'ai'
- * @param {string} message - 表示するメッセージ
- */
 function appendMessage(sender, message) {
     const messageElement = document.createElement('div');
     messageElement.classList.add('message', `${sender}-message`);
     messageElement.textContent = message;
-    
     chatLog.appendChild(messageElement);
     chatLog.scrollTop = chatLog.scrollHeight;
 }
 
-/**
- * AIからの返信を取得して表示する
- * @param {string} userMessage - ユーザーが入力したメッセージ
- */
 async function getAIResponse(userMessage) {
     if (!currentProfile) {
         showSpeechBubble("最初にプロフィールを読み込んでください。");
         return;
     }
-
     const prompt = `
         あなたは「${currentProfile.name}」という人物のAIです。
         以下の「知識」に基づいて、あなた自身の言葉としてユーザーからの質問に答えてください。
-
         # 知識
         ${currentProfile.knowledge}
-
         # ユーザーからの質問
         ${userMessage}
     `;
-
     showSpeechBubble('考え中...');
-
     try {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
         });
-
         if (!response.ok) {
             console.error('API Response Error:', response.status, response.statusText);
             throw new Error('APIからの応答が正常ではありません。');
         }
-
         const data = await response.json();
-        
         if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0]) {
              const aiMessage = data.candidates[0].content.parts[0].text;
              showSpeechBubble(aiMessage.trim());
@@ -211,21 +222,15 @@ async function getAIResponse(userMessage) {
             console.error('無効なレスポンス形式:', data);
             throw new Error('AIからの応答形式が正しくありません。');
         }
-
     } catch (error) {
         console.error('APIリクエストエラー:', error);
         showSpeechBubble('申し訳ありません、エラーが発生しました。');
     }
 }
 
-/**
- * 吹き出しにテキストを表示する関数
- * @param {string} text - 表示するテキスト
- */
 function showSpeechBubble(text) {
     aiResponseText.textContent = text;
     speechBubble.classList.remove('hidden');
-
     setTimeout(() => {
         speechBubble.classList.add('hidden');
     }, 7000);
@@ -233,5 +238,4 @@ function showSpeechBubble(text) {
 
 
 // --- 初期化処理 ---
-// ページが読み込まれたら、リストの最初のプロフィールを読み込む
 loadProfile(profileIds[currentProfileIndex]);
