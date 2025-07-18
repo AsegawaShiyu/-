@@ -1,33 +1,42 @@
 // script.js
 
-// --- DOM要素の取得 ---
-// このように、最初に使う要素をまとめて取得しておくと便利です。
+// --- サービス設定（重要：ここは後で自分の情報に書き換えてください） ---
+// Firebaseの初期化（firebaseConfig.jsからインポートするのが望ましいですが、ここでは直接記述）
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCEcwh528U2-e8MTENHHsQAny2ES3Jnm40",
+    authDomain: "jikoshokai-9f75c.firebaseapp.com",
+    projectId: "jikoshokai-9f75c",
+    storageBucket: "jikoshokai-9f75c.firebasestorage.app",
+    messagingSenderId: "701041971815",
+    appId: "1:701041971815:web:1bc7c96abfa0a398d0fac2"
+  };
+
+// Gemini APIキー
+const GEMINI_API_KEY = 'AIzaSyCodqLp1f3AvMlqaRXfuA8JBCglkObbK8k'; // あなたのGemini APIキーをここに貼り付け
+
+
+// --- Firebaseの初期化 ---
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+
+// --- DOM要素の取得（変更なし） ---
 const chatForm = document.getElementById('chat-form');
 const userInput = document.getElementById('user-input');
 const chatLog = document.getElementById('chat-log');
-const personImage = document.getElementById('person-image');
 const speechBubble = document.getElementById('speech-bubble');
 const aiResponseText = document.getElementById('ai-response-text');
 
-// --- イベントリスナーの設定 ---
-
-// チャットフォームが送信されたときの処理
+// --- イベントリスナー（変更なし） ---
 chatForm.addEventListener('submit', (event) => {
-    // フォームのデフォルトの送信動作（ページのリロード）を防ぐ
     event.preventDefault();
-
-    // 入力されたテキストを取得し、前後の空白を削除
     const userMessage = userInput.value.trim();
-
-    // メッセージが空でなければ処理を実行
     if (userMessage) {
-        // ユーザーのメッセージをチャットログに表示する（この関数は後で作成します）
         appendMessage('user', userMessage);
-
-        // AIからの返信を処理する（この関数は後で作成します）
-        getAIResponse(userMessage);
-
-        // 入力欄をクリアする
+        getAIResponse(userMessage); // この関数がAIを呼び出すように変わる
         userInput.value = '';
     }
 });
@@ -36,52 +45,79 @@ chatForm.addEventListener('submit', (event) => {
 // --- 関数の定義 ---
 
 /**
- * チャットログにメッセージを追加する関数
- * @param {string} sender - 'user' または 'ai'
- * @param {string} message - 表示するメッセージ
+ * チャットログにメッセージを追加する関数（変更なし）
  */
 function appendMessage(sender, message) {
-    // 新しいdiv要素を作成
     const messageElement = document.createElement('div');
-    // 'message' と 'user-message' または 'ai-message' というクラスを追加
     messageElement.classList.add('message', `${sender}-message`);
-    // メッセージのテキストを設定
     messageElement.textContent = message;
-    
-    // チャットログに新しいメッセージ要素を追加
     chatLog.appendChild(messageElement);
-
-    // チャットログを一番下までスクロールする
     chatLog.scrollTop = chatLog.scrollHeight;
 }
 
 /**
- * AIからの返信を取得して表示する（今はダミーの返信）
+ * ✅ AIからの返信を取得して表示する（Gemini APIを呼び出すように変更）
  * @param {string} userMessage - ユーザーが入力したメッセージ
  */
-function getAIResponse(userMessage) {
-    // 現時点では、AIの代わりに固定のメッセージを返す
-    const dummyResponse = `「${userMessage}」についてですね。興味深い質問です！`;
+async function getAIResponse(userMessage) {
+    // AIに与える役割や知識（プロンプト）
+    // 将来的にはこの部分をFirestoreから取得した人物データに置き換えます
+    const prompt = `
+        あなたは、とある人物のAIアシスタントです。
+        以下の制約を守って、ユーザーからの質問に答えてください。
 
-    // 吹き出しにAIの返信を表示する（この関数も後で作成します）
-    showSpeechBubble(dummyResponse);
+        # 制約
+        - あなたはフレンドリーで、少しユーモアのある性格です。
+        - 簡潔に、2〜3文で回答してください。
+
+        # ユーザーからの質問
+        ${userMessage}
+    `;
+
+    // 吹き出しに「考え中...」と表示
+    showSpeechBubble('考え中...');
+
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }]
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('APIからの応答が正常ではありません。');
+        }
+
+        const data = await response.json();
+        const aiMessage = data.candidates[0].content.parts[0].text;
+        
+        // 実際の返信を吹き出しに表示
+        showSpeechBubble(aiMessage.trim());
+
+    } catch (error) {
+        console.error('APIリクエストエラー:', error);
+        showSpeechBubble('申し訳ありません、エラーが発生しました。');
+    }
 }
 
 /**
- * 吹き出しにテキストを表示する関数
- * @param {string} text - 表示するテキスト
+ * 吹き出しにテキストを表示する関数（変更なし）
  */
 function showSpeechBubble(text) {
     aiResponseText.textContent = text;
     speechBubble.classList.remove('hidden');
 
-    // 5秒後に自動で吹き出しを隠す
+    // 7秒後に自動で吹き出しを隠す（少し長めに変更）
     setTimeout(() => {
         speechBubble.classList.add('hidden');
-    }, 5000);
+    }, 7000);
 }
 
 
 // --- 初期化処理 ---
-// ページが読み込まれたときに、簡単な挨拶を表示
+// ページが読み込まれたときに、簡単な挨拶を表示（変更なし）
 showSpeechBubble('こんにちは！僕について何でも質問してください。');
