@@ -3,9 +3,7 @@
 // --- サービス設定 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, addDoc, serverTimestamp, query, where, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
-// ✅ AuthのcreateUserWithEmailAndPasswordを追加
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-// ✅ Firebase Storageの関数をインポート
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-storage.js";
 
 const firebaseConfig = {
@@ -29,10 +27,11 @@ const storage = getStorage(app);
 
 
 // --- グローバル変数 ---
-let profiles = []; // ✅ 全プロフィールの情報を保持する配列
-let currentProfileIndex = 0; // ✅ 現在表示しているプロフィールのインデックス
-let currentProfile = null; // 現在表示している人物のデータ
+let profiles = [];
+let currentProfileIndex = 0;
+let currentProfile = null;
 let lastUserMessage = '';
+
 
 // --- DOM要素の取得 ---
 const chatForm = document.getElementById('chat-form');
@@ -66,7 +65,6 @@ chatForm.addEventListener('submit', (event) => {
     }
 });
 
-// ✅ 人物切り替えのロジックを更新
 switchPersonBtn.addEventListener('click', () => {
     if (profiles.length === 0) return;
     currentProfileIndex = (currentProfileIndex + 1) % profiles.length;
@@ -74,11 +72,10 @@ switchPersonBtn.addEventListener('click', () => {
     loadProfile(nextProfileId);
 });
 
-// ✅ 編集対象のID取得方法を更新
 personalizeBtn.addEventListener('click', async () => {
     if (!currentProfile) return;
     const profileIdToEdit = profiles[currentProfileIndex].id;
-    const email = prompt("編集するプロフィールのメールアドレスを入力してください:", `${profileIdToEdit}@example.com`);
+    const email = prompt("編集するプロフィールのメールアドレスを入力してください:", `${profiles[currentProfileIndex].email || ''}`);
     if (!email) return;
     const password = prompt("パスワードを入力してください:");
     if (!password) return;
@@ -87,7 +84,7 @@ personalizeBtn.addEventListener('click', async () => {
         alert(`認証に成功しました。「${currentProfile.name}」のパーソナライズを開始します。`);
         startPersonalization();
     } catch (error) {
-        alert("認証に失敗しました。メールアドレスまたはパスワードが正しくありません。");
+        alert("認証に失敗しました。");
         console.error("認証エラー:", error);
     }
 });
@@ -113,14 +110,12 @@ savePersonalizationBtn.addEventListener('click', async () => {
             newKnowledge += `質問: ${question}\n回答: ${answer}\n\n`;
         }
     });
-
     if (!newKnowledge && currentProfile.knowledge) {
         newKnowledge = currentProfile.knowledge;
     } else if (!newKnowledge && !currentProfile.knowledge) {
         alert('少なくとも1つの質問に回答してください。');
         return;
     }
-
     try {
         const docRef = doc(db, "profiles", profileIdToUpdate);
         await updateDoc(docRef, { knowledge: newKnowledge });
@@ -141,17 +136,15 @@ savePersonalizationBtn.addEventListener('click', async () => {
 chatLog.addEventListener('click', async (event) => {
     if (event.target.classList.contains('bad-feedback-btn')) {
         const button = event.target;
-        const badAnswer = button.dataset.answer;
-        const question = button.dataset.question;
         const profileId = profiles[currentProfileIndex].id;
         try {
             await addDoc(collection(db, "feedback"), {
                 profileId: profileId,
-                question: question,
-                badAnswer: badAnswer,
+                question: button.dataset.question,
+                badAnswer: button.dataset.answer,
                 timestamp: serverTimestamp()
             });
-            alert('フィードバックを送信しました。ありがとうございます！');
+            alert('フィードバックを送信しました。');
             button.textContent = '送信済';
             button.disabled = true;
         } catch (error) {
@@ -161,7 +154,6 @@ chatLog.addEventListener('click', async (event) => {
     }
 });
 
-// ✅ 人物追加ボタンのリスナー
 addPersonBtn.addEventListener('click', () => {
     addPersonModal.classList.remove('hidden');
 });
@@ -169,59 +161,52 @@ cancelAddPersonBtn.addEventListener('click', () => {
     addPersonModal.classList.add('hidden');
 });
 
-// ✅ 人物追加フォームの送信リスナー
 addPersonForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     const name = document.getElementById('new-person-name').value;
     const email = document.getElementById('new-person-email').value;
     const password = document.getElementById('new-person-password').value;
     const imageFile = document.getElementById('new-person-image').files[0];
+    const blurAmount = document.getElementById('new-person-blur').value;
 
     if (!name || !email || !password || !imageFile) {
         alert('すべての項目を入力してください。');
         return;
     }
-
     try {
-        // 1. Firebase Authenticationでユーザーを作成
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const userId = userCredential.user.uid;
-
-        // 2. Firebase Storageに画像をアップロード
         const storageRef = ref(storage, `profile_images/${userId}`);
         await uploadBytes(storageRef, imageFile);
         const imageUrl = await getDownloadURL(storageRef);
-
-        // 3. Firestoreにプロフィール情報を作成 (ドキュメントIDをAuthのUIDと一致させる)
         await setDoc(doc(db, "profiles", userId), {
             name: name,
             imageUrl: imageUrl,
-            knowledge: `こんにちは、${name}です。よろしくお願いします。` // 初期ナレッジ
+            email: email, // メールアドレスも保存
+            knowledge: `こんにちは、${name}です。よろしくお願いします。`,
+            blurAmount: Number(blurAmount)
         });
-        
         alert('新しい人物が追加されました！');
         addPersonForm.reset();
         addPersonModal.classList.add('hidden');
-        loadAllProfiles(); // リストを再読み込み
-
+        loadAllProfiles();
     } catch (error) {
         console.error("人物の追加エラー:", error);
         alert("エラーが発生しました: " + error.message);
     }
 });
+
+
 // --- 関数の定義 ---
 
 async function loadAllProfiles() {
     try {
         const querySnapshot = await getDocs(collection(db, "profiles"));
-        profiles = []; // 配列をリセット
+        profiles = [];
         querySnapshot.forEach((doc) => {
-            // ドキュメントIDとデータを両方保存
             profiles.push({ id: doc.id, ...doc.data() });
         });
-
         if (profiles.length > 0) {
-            // 最初のプロフィールを読み込む
             currentProfileIndex = 0;
             loadProfile(profiles[currentProfileIndex].id);
         } else {
@@ -232,16 +217,32 @@ async function loadAllProfiles() {
     }
 }
 
+async function loadProfile(profileId) {
+    try {
+        const docRef = doc(db, "profiles", profileId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            currentProfile = docSnap.data();
+            personImage.src = currentProfile.imageUrl || './placeholder.png';
+            personImage.style.filter = `blur(${currentProfile.blurAmount || 0}px)`;
+            showSpeechBubble(`こんにちは！${currentProfile.name}です。何でも質問してください。`);
+        } else {
+            console.error("プロフィールが見つかりません:", profileId);
+        }
+    } catch (error) {
+        console.error("プロフィールの読み込みエラー:", error);
+    }
+}
+
 async function startPersonalization() {
     mainContent.style.display = 'none';
     chatFooter.style.display = 'none';
     personalizationScreen.classList.remove('hidden');
-    personalizationQuestions.innerHTML = '<p>フィードバックと質問を準備中...</p>';
-
+    personalizationQuestions.innerHTML = '<p>準備中...</p>';
     let feedbackHTML = '';
-    const feedbackQuery = query(collection(db, "feedback"), where("profileId", "==", profileIds[currentProfileIndex]));
+    const profileId = profiles[currentProfileIndex].id;
+    const feedbackQuery = query(collection(db, "feedback"), where("profileId", "==", profileId));
     const feedbackSnapshot = await getDocs(feedbackQuery);
-
     if (!feedbackSnapshot.empty) {
         feedbackHTML += '<h3>不評だった回答の修正</h3>';
         feedbackSnapshot.forEach(feedbackDoc => {
@@ -250,64 +251,33 @@ async function startPersonalization() {
                 <div class="feedback-item" data-feedback-id="${feedbackDoc.id}">
                     <p class="feedback-question">以前の質問: ${feedback.question}</p>
                     <p class="feedback-bad-answer">不評だった回答: 「${feedback.badAnswer}」</p>
-                    <label for="corr-${feedbackDoc.id}">この質問に対する理想的な回答を入力してください:</label>
+                    <label for="corr-${feedbackDoc.id}">理想的な回答:</label>
                     <textarea id="corr-${feedbackDoc.id}" rows="3"></textarea>
-                </div>
-                <hr>
-            `;
+                </div><hr>`;
         });
     }
-
-    const promptForQuestions = `
-        あなたは優秀なインタビュアーです。
-        ある人物の個性、スキル、趣味、価値観などを深く理解するために、最も重要な5つの質問を考えてください。
-        質問は改行して、番号付きリスト（例: 1. ...）で出力してください。
-    `;
+    const promptForQuestions = `あなたは優秀なインタビュアーです。人物の個性、スキル、趣味などを理解するための5つの質問を考えてください。番号付きリストで出力してください。`;
     try {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: promptForQuestions }] }] })
         });
-        if (!response.ok) { throw new Error('APIからの応答が正常ではありません。'); }
-
+        if (!response.ok) { throw new Error('API Error'); }
         const data = await response.json();
         const questionsText = data.candidates[0].content.parts[0].text;
-        
         personalizationQuestions.innerHTML = feedbackHTML;
         personalizationQuestions.innerHTML += '<h3>新しい知識の追加</h3>';
         const questions = questionsText.split('\n').filter(q => q.trim() !== '');
-        
         questions.forEach((question, index) => {
             const questionItem = document.createElement('div');
             questionItem.classList.add('question-item');
-            questionItem.innerHTML = `
-                <label for="q-${index}">${question}</label>
-                <textarea id="q-${index}" rows="3"></textarea>
-            `;
+            questionItem.innerHTML = `<label for="q-${index}">${question}</label><textarea id="q-${index}" rows="3"></textarea>`;
             personalizationQuestions.appendChild(questionItem);
         });
-
     } catch (error) {
         console.error("質問の生成エラー:", error);
-        personalizationQuestions.innerHTML = '<p>エラーが発生しました。もう一度お試しください。</p>';
-    }
-}
-
-async function loadProfile(profileId) {
-    try {
-        const docRef = doc(db, "profiles", profileId);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-            currentProfile = docSnap.data();
-            personImage.src = currentProfile.imageUrl || './placeholder.png';
-            showSpeechBubble(`こんにちは！${currentProfile.name}です。何でも質問してください。`);
-        } else {
-            console.error("プロフィールが見つかりません:", profileId);
-            showSpeechBubble("エラー: プロフィールが見つかりません。");
-        }
-    } catch (error) {
-        console.error("プロフィールの読み込みエラー:", error);
+        personalizationQuestions.innerHTML = '<p>エラーが発生しました。</p>';
     }
 }
 
@@ -330,18 +300,8 @@ function appendMessage(sender, message) {
 }
 
 async function getAIResponse(userMessage) {
-    if (!currentProfile) {
-        showSpeechBubble("最初にプロフィールを読み込んでください。");
-        return;
-    }
-    const prompt = `
-        あなたは「${currentProfile.name}」という人物のAIです。
-        以下の「知識」に基づいて、あなた自身の言葉としてユーザーからの質問に答えてください。
-        # 知識
-        ${currentProfile.knowledge}
-        # ユーザーからの質問
-        ${userMessage}
-    `;
+    if (!currentProfile) { return; }
+    const prompt = `あなたは「${currentProfile.name}」という人物のAIです。以下の「知識」に基づき、あなた自身の言葉としてユーザーの質問に答えてください。# 知識\n${currentProfile.knowledge}\n# ユーザーからの質問\n${userMessage}`;
     showSpeechBubble('考え中...');
     try {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
@@ -349,19 +309,13 @@ async function getAIResponse(userMessage) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
         });
-        if (!response.ok) {
-            console.error('API Response Error:', response.status, response.statusText);
-            throw new Error('APIからの応答が正常ではありません。');
-        }
+        if (!response.ok) { throw new Error('API Error'); }
         const data = await response.json();
         if (data.candidates && data.candidates[0].content.parts[0]) {
              const aiMessage = data.candidates[0].content.parts[0].text;
              showSpeechBubble(aiMessage.trim());
              appendMessage('ai', aiMessage.trim());
-        } else {
-            console.error('無効なレスポンス形式:', data);
-            throw new Error('AIからの応答形式が正しくありません。');
-        }
+        } else { throw new Error('Invalid response format'); }
     } catch (error) {
         console.error('APIリクエストエラー:', error);
         showSpeechBubble('申し訳ありません、エラーが発生しました。');
