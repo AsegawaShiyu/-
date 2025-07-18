@@ -76,6 +76,9 @@ body {
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     opacity: 1;
     transition: opacity 0.3s, transform 0.3s;
+    max-height: 150px; /* 吹き出しの最大の高さを指定 */
+    overflow-y: auto;  /* 内容がはみ出た場合に縦スクロールバーを表示 */
+    word-wrap: break-word; /* 長い単語でも折り返すようにする */
 }
 
 #speech-bubble.hidden {
