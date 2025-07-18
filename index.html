@@ -13,7 +13,7 @@
         <header id="control-panel">
             <button id="switch-person-btn">人物を切り替え</button>
             <button id="personalize-btn">パーソナライズ</button>
-            <button id="add-person-btn" class="plus-btn">+</button> </header>
+            <button id="add-person-btn" class="plus-btn">+</button>
         </header>
 
         <main id="main-content">
@@ -44,34 +44,39 @@
             <button id="save-personalization-btn">この内容で保存する</button>
         </div>
     </div>
-
+    
     <div id="add-person-modal" class="hidden">
-    <div id="add-person-content">
-        <h2>新しい人物を追加</h2>
-        <form id="add-person-form">
-            <div class="form-item">
-                <label for="new-person-name">名前</label>
-                <input type="text" id="new-person-name" required>
-            </div>
-            <div class="form-item">
-                <label for="new-person-email">メールアドレス (ログイン用)</label>
-                <input type="email" id="new-person-email" required>
-            </div>
-            <div class="form-item">
-                <label for="new-person-password">パスワード (ログイン用)</label>
-                <input type="password" id="new-person-password" required>
-            </div>
-            <div class="form-item">
-                <label for="new-person-image">顔画像</label>
-                <input type="file" id="new-person-image" accept="image/*" required>
-            </div>
-            <div class="form-actions">
-                <button type="submit">追加する</button>
-                <button type="button" id="cancel-add-person-btn">キャンセル</button>
-            </div>
-        </form>
+        <div id="add-person-content">
+            <h2>新しい人物を追加</h2>
+            <form id="add-person-form">
+                <div class="form-item">
+                    <label for="new-person-name">名前</label>
+                    <input type="text" id="new-person-name" required>
+                </div>
+                <div class="form-item">
+                    <label for="new-person-email">メールアドレス (ログイン用)</label>
+                    <input type="email" id="new-person-email" required>
+                </div>
+                <div class="form-item">
+                    <label for="new-person-password">パスワード (ログイン用)</label>
+                    <input type="password" id="new-person-password" required>
+                </div>
+                <div class="form-item">
+                    <label for="new-person-image">顔画像</label>
+                    <input type="file" id="new-person-image" accept="image/*" required>
+                </div>
+                <div class="form-item">
+                    <label for="new-person-blur">画像のぼかし具合 (0〜20)</label>
+                    <input type="range" id="new-person-blur" min="0" max="20" value="5">
+                </div>
+                <div class="form-actions">
+                    <button type="submit">追加する</button>
+                    <button type="button" id="cancel-add-person-btn">キャンセル</button>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
+
 
     <script type="module" src="script.js"></script>
 
