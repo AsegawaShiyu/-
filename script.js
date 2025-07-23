@@ -257,7 +257,7 @@ async function startPersonalization() {
                 </div><hr>`;
         });
     }
-    const promptForQuestions = `あなたは優秀なインタビュアーです。人物の個性、スキル、趣味などを理解するための5つの質問を考えてください。番号付きリストで出力してください。`;
+    const promptForQuestions = `あなたは友達です。人物の個性、スキル、趣味、経歴などを理解するための5つの質問を考えてください。番号付きリストで出力してください。`;
     try {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
