@@ -50,6 +50,7 @@ body {
     align-items: center;
     padding-top: 30px;
     position: relative;
+    overflow-y: auto;
 }
 
 /* 人物の画像 */
